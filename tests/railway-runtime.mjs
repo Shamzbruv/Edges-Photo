@@ -18,6 +18,14 @@ try{
  await start();
  assert.match(await (await fetch(base)).text(),/Beyond/);
  assert.equal((await fetch(base+'/images/hero.webp')).status,200);
+ const pages=[['/work','best light.'],['/work/portraits','The art of being you.'],['/work/weddings','Always, from here.'],['/work/celebrations','Made for this moment.'],['/sessions','A different edge.'],['/experience','More than'],['/about','A feeling for people.'],['/journal','Field notes'],['/journal/prepare-for-your-portrait','Build outfits that work together'],['/journal/wedding-photo-timeline','Make the family list specific'],['/journal/choose-your-favourites','Build a balanced shortlist'],['/journal/care-for-your-final-images','Keep more than one copy'],['/client-lounge','Your collection.'],['/contact','Tell us what'],['/book','something beautiful.'],['/admin/bookings','workspace is protected'],['/admin/galleries','workspace is protected'],['/admin/payments','workspace is protected'],['/admin/settings','workspace is protected'],['/admin/preview/bookings','WORKSPACE PREVIEW'],['/admin/preview/galleries','WORKSPACE PREVIEW'],['/admin/preview/payments','WORKSPACE PREVIEW'],['/admin/preview/settings','WORKSPACE PREVIEW']];
+ const pageResults=await Promise.all(pages.map(async([route,content])=>{const r=await fetch(base+route),html=await r.text();assert.equal(r.status,200,route);assert.ok(html.toLowerCase().includes(content.toLowerCase()),route+' missing content');return html}));
+ for(const route of ['/work/missing','/journal/missing','/admin/missing','/admin/preview/missing'])assert.equal((await fetch(base+route)).status,404,route);
+ // All internal page destinations exposed by the public navigation must resolve.
+ const destinations=new Set(pageResults.flatMap(html=>[...html.matchAll(/href="(\/[^"#?]*)/g)].map(m=>m[1])).filter(h=>!h.startsWith('/_')&&!h.startsWith('/api/')&&!h.startsWith('/images/')));
+ for(const href of destinations)assert.ok((await fetch(base+href)).status<400,'Broken destination '+href);
+ console.log('PASS: 23 content/workspace pages, unknown-route 404s and internal navigation destinations.');
+
  assert.equal((await get('dashboard')).status,403);
  assert.equal((await get('dashboard',{}, {'oai-authenticated-user-id':'spoof','oai-authenticated-user-email':'studio@example.test'})).status,403);
  const auth=await fetch(base+'/api/auth',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({email:'studio@example.test',password:env.STUDIO_ADMIN_PASSWORD})});assert.equal(auth.status,200);cookie=auth.headers.get('set-cookie').split(';')[0];

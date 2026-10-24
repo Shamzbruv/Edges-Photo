@@ -1,0 +1,6 @@
+import {ArrowUpRight} from 'lucide-react';
+import SiteShell,{PageIntro} from '../../components/site-shell';
+import PreparationPlanner from '../../components/preparation-planner';
+import {guides} from '../../lib/editorial';
+export const metadata={title:'Field notes & shoot planner — Edge Photos',description:'Practical photography preparation guides, a saved session checklist, wedding timeline advice and help choosing your favourite photographs.'};
+export default function Page(){return <SiteShell active="/journal"><PageIntro number="05" kicker="FIELD NOTES / A LITTLE STUDIO WISDOM" title="Before the beautiful." italic="After the moment." description="Useful things to know, without the overwhelm. Prepare for your session, make a thoughtful selection, and keep your finished photographs safe."/><section className="journal-grid editorial-pad">{guides.map((g,i)=><a href={'/journal/'+g.slug} className="journal-card" key={g.slug}><div className="journal-photo"><img src={g.image} alt={'Illustrative photograph accompanying '+g.title} loading={i?'lazy':'eager'}/><span className="mono">NOTE / 0{i+1}</span></div><div className="journal-meta"><span className="eyebrow">{g.category}</span><span>{g.read}</span></div><h2>{g.title}</h2><p>{g.intro}</p><span className="underlined">Read the note<ArrowUpRight size={16}/></span></a>)}</section><PreparationPlanner/></SiteShell>}

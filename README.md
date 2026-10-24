@@ -81,3 +81,14 @@ No account credentials were supplied, so no real payment was collected or end-to
 ## Asset provenance
 
 The three concept photographs were created with the built-in image-generation tool and optimized to WebP. Prompts: a cinematic Black Jamaican fashion portrait in golden side light with negative space; a Caribbean bride and groom in a sunset garden; a burgundy-gown birthday editorial against terracotta. They are clearly labeled as illustrative and do not claim to be the photographer's portfolio. Original supplied logo files are retained. The attached lunar brief informed the single animation loop, scroll-driven progression, cinematic composition and reduced-motion handling; its lunar assets and copy are not used.
+
+
+## Multi-page experience
+
+The public site now has 16 content pages: `/`, `/work`, three individual collections at `/work/portraits`, `/work/weddings`, `/work/celebrations`, `/sessions`, `/experience`, `/about`, `/journal`, four articles at `/journal/[slug]`, `/client-lounge`, `/contact`, and `/book`. Shared navigation uses actual routes. Package rates come from studio configuration; unapproved rates stay identified as previews. Concept photographs remain labelled.
+
+The field notes planner stores a session brief and preparation checklist only in the visitor's browser. It supports a text download, reset, and explicit handoff to `/book?session=…&from=planner`; that brief is submitted to the existing studio API only when the visitor submits their booking request. WhatsApp enquiries open a reviewable message, never send automatically.
+
+Studio sections have direct routes at `/admin/bookings`, `/admin/galleries`, `/admin/payments`, and `/admin/settings`, with equivalent illustrative tour routes under `/admin/preview/`. These preserve the existing protected API and selection/edit/delivery workflow.
+
+Validation: `pnpm test`, `pnpm build:railway`, and `pnpm test:railway`. The production runtime suite checks content pages, missing-page 404s, internal route destinations, and the full authenticated booking/gallery/persistence workflow. GitHub main remains the source for Railway auto-deployment; this change does not provision hosting variables, a persistent volume, or payment accounts.

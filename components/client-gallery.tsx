@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {ArrowDownToLine,ArrowLeft,ArrowRight,Check,Heart,LockKeyhole,Maximize2,Send,SlidersHorizontal} from 'lucide-react';
 import {api,query,conceptPhotos} from '../lib/client';
-import {Lightbox} from './portfolio';
+import {Lightbox} from './lightbox';
 export default function ClientGallery({token}:{token:string}){const demo=token==='demo';const [data,setData]=useState<any>(null),[error,setError]=useState(''),[selected,setSelected]=useState<string[]>([]),[notes,setNotes]=useState(''),[filter,setFilter]=useState('all'),[index,setIndex]=useState<number|null>(null),[busy,setBusy]=useState(false),[submitted,setSubmitted]=useState(false),[layout,setLayout]=useState('editorial');
 const load=()=>{if(demo){setData({gallery:{title:'A little more you.',status:'proofing',selection_limit:3,notes:'',expires_at:new Date(Date.now()+30*86400000).toISOString()},photos:conceptPhotos.map((p,i)=>({...p,id:'demo-'+i,name:`EDGE_${String(i+1).padStart(4,'0')}.jpg`,selected:0}))});return}query('gallery',{token}).then(v=>{setData(v);setSelected(v.photos.filter((p:any)=>p.selected).map((p:any)=>p.id));setNotes(v.gallery.notes);setSubmitted(v.gallery.status==='selected')}).catch(e=>setError(e.message))};useEffect(load,[token]);
 if(!data)return <div className="empty-page"><LockKeyhole/><h2>{error?'This collection is private.':'Opening your collection…'}</h2><p>{error||'Good things are worth a moment.'}</p><a href="/" className="underlined">Back to Edge Photos</a></div>;
