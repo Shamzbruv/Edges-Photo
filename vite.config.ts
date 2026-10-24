@@ -38,6 +38,9 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async ({ command }) => {
+  if (process.env.STUDIO_DEPLOY_TARGET === "railway") {
+    return {plugins:[vinext()],resolve:{alias:{"cloudflare:workers":new URL("./server/railway-env.mjs",import.meta.url).pathname}},ssr:{external:["node:sqlite"]}};
+  }
   configureToolEnvironment(process.cwd());
 
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.

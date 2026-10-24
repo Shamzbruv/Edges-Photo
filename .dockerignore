@@ -1,0 +1,15 @@
+.git
+node_modules
+dist
+.next
+.vinext
+.wrangler
+.sites-runtime
+.studio-data
+.env*
+.dev.vars*
+upload
+generated_images
+outputs
+work
+*.tsbuildinfo

@@ -1,3 +1,5 @@
+import {env} from "cloudflare:workers";
+import {readSession} from "../lib/admin-session";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -20,6 +22,8 @@ const CALLBACK_PATH = "/callback";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
+  const runtime=env as unknown as Record<string,any>;
+  if(runtime.STUDIO_RUNTIME==="railway") return readSession(requestHeaders.get("cookie")||"",runtime);
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!userId || !email) return null;

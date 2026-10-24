@@ -1,6 +1,21 @@
 # Edge Photos — Beyond the frame
 
-A cinematic, responsive photography site with a persistent studio workspace, client proofing, bookings and payment adapters. Built with React, Vinext, Lenis, Cloudflare D1 and R2.
+A cinematic, responsive photography site with a persistent studio workspace, client proofing, bookings and payment adapters. Built with React, Vinext and Lenis, with Railway Node/SQLite/private-volume and Sites D1/R2 runtime targets.
+
+## Railway deployment
+
+This repository includes a production Node 24 target for Railway. `railway.json` selects the Dockerfile and `/api/health` check. The server binds `0.0.0.0` on Railway's assigned `PORT`; it does not run Wrangler or a preview server.
+
+Before accepting client work:
+
+1. Mount one Railway persistent volume at `/data` on this service. Keep one replica. `STUDIO_DATA_DIR` must match the volume mount path (Docker defaults to `/data`). SQLite records and private photo files live on that volume. Both booking writes and photo uploads are blocked when Railway reports no matching persistent mount.
+2. Set `STUDIO_ADMIN_EMAIL` to the photographer's login email and `STUDIO_ADMIN_PASSWORD` to a strong secret of at least 16 characters through Railway variables. Optionally set a separate random `STUDIO_SESSION_SECRET` of at least 32 characters. Never commit these values. This deployment uses password sign-in at `/studio-login`; it does not rely on ChatGPT identity headers. Requests that spoof platform identity headers cannot access the admin API.
+3. Deploy the `main` branch. Migrations run transactionally on startup and previously applied files are checked for changes. `/api/health` returns 200 after the database is ready.
+4. Sign in, set actual rates and payment instructions, and approve pricing. Configure payment gateway secrets only when the actual accounts are ready.
+
+Use `pnpm run build:railway`, then `pnpm start` for the Node target. `pnpm run test:railway` exercises the actual production HTTP server after a Railway build, including persistence across a restart. Local standalone data defaults to `.studio-data/`, which is ignored by Git.
+
+The existing Sites/Cloudflare target remains available: without the Railway target flag the build preserves D1/R2 and ChatGPT authentication, and `start:sites` is its local Worker preview command. The two hosts have separate databases and photo storage; this code change does not transfer existing hosted data.
 
 ## Routes
 
@@ -13,7 +28,7 @@ A cinematic, responsive photography site with a persistent studio workspace, cli
 
 ## Studio setup before client launch
 
-The published preview starts owner-private. Public client access must be deliberately enabled by the owner. Keep admin authorization in place when changing audience.
+The Sites preview starts owner-private. Railway uses its own public domain and protected studio login. Keep admin authorization configured before client launch.
 
 1. Sign in to `/admin` using an account whose email is in the `STUDIO_ADMIN_EMAIL` runtime variable. The owner can change that comma-separated allowlist when handing over to the photographer.
 2. Replace the clearly labeled concept photography with original, licensed work. The supplied logos are preserved under `public/images/`.
