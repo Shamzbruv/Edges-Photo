@@ -92,3 +92,12 @@ The field notes planner stores a session brief and preparation checklist only in
 Studio sections have direct routes at `/admin/bookings`, `/admin/galleries`, `/admin/payments`, and `/admin/settings`, with equivalent illustrative tour routes under `/admin/preview/`. These preserve the existing protected API and selection/edit/delivery workflow.
 
 Validation: `pnpm test`, `pnpm build:railway`, and `pnpm test:railway`. The production runtime suite checks content pages, missing-page 404s, internal route destinations, and the full authenticated booking/gallery/persistence workflow. GitHub main remains the source for Railway auto-deployment; this change does not provision hosting variables, a persistent volume, or payment accounts.
+
+
+## Website photo management
+
+Open `/admin/website` after studio sign-in. Upload your own JPG/PNG/WebP photographs after design work. Files go to persistent photo storage, never GitHub. New images are drafts. Edit captions, collection, display order and publication, and choose one published homepage hero. Published images appear in `/work/[collection]`. Delete removes the original and preview.
+
+There is no application photo-count quota or 20 MB whole-file cap for this new section. Originals upload in 8 MiB retryable multipart chunks; reselect the same unchanged files and collection in the same browser to resume. Each request is bounded, and originals stream from disk. Browser-generated JPEG previews (1920px, up to 2 MiB) serve the website while originals remain intact. A preview generation failure is reported and does not lose the original. This uploader supports browser-displayable JPG/PNG/WebP, not RAW files. Private client galleries retain their existing rules.
+
+Physical storage and provider multipart limits still apply (currently 10,000 parts per file, about 78 GiB with 8 MiB chunks). This is not infinite storage. Railway requires the existing persistent volume and studio login configuration; no infrastructure is provisioned by a source push. Incomplete multipart sessions remain available for resume; completed Railway chunk files are removed after their database record commits. Never remove active upload directories when cleaning up abandoned sessions.

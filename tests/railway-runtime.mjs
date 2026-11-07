@@ -18,13 +18,13 @@ try{
  await start();
  assert.match(await (await fetch(base)).text(),/Beyond/);
  assert.equal((await fetch(base+'/images/hero.webp')).status,200);
- const pages=[['/work','best light.'],['/work/portraits','The art of being you.'],['/work/weddings','Always, from here.'],['/work/celebrations','Made for this moment.'],['/sessions','A different edge.'],['/experience','More than'],['/about','A feeling for people.'],['/journal','Field notes'],['/journal/prepare-for-your-portrait','Build outfits that work together'],['/journal/wedding-photo-timeline','Make the family list specific'],['/journal/choose-your-favourites','Build a balanced shortlist'],['/journal/care-for-your-final-images','Keep more than one copy'],['/client-lounge','Your collection.'],['/contact','Tell us what'],['/book','something beautiful.'],['/admin/bookings','workspace is protected'],['/admin/galleries','workspace is protected'],['/admin/payments','workspace is protected'],['/admin/settings','workspace is protected'],['/admin/preview/bookings','WORKSPACE PREVIEW'],['/admin/preview/galleries','WORKSPACE PREVIEW'],['/admin/preview/payments','WORKSPACE PREVIEW'],['/admin/preview/settings','WORKSPACE PREVIEW']];
+ const pages=[['/work','best light.'],['/work/portraits','The art of being you.'],['/work/weddings','Always, from here.'],['/work/celebrations','Made for this moment.'],['/sessions','A different edge.'],['/experience','More than'],['/about','A feeling for people.'],['/journal','Field notes'],['/journal/prepare-for-your-portrait','Build outfits that work together'],['/journal/wedding-photo-timeline','Make the family list specific'],['/journal/choose-your-favourites','Build a balanced shortlist'],['/journal/care-for-your-final-images','Keep more than one copy'],['/client-lounge','Your collection.'],['/contact','Tell us what'],['/book','something beautiful.'],['/admin/bookings','workspace is protected'],['/admin/galleries','workspace is protected'],['/admin/payments','workspace is protected'],['/admin/settings','workspace is protected'],['/admin/website','workspace is protected'],['/admin/preview/website','WORKSPACE PREVIEW'],['/admin/preview/bookings','WORKSPACE PREVIEW'],['/admin/preview/galleries','WORKSPACE PREVIEW'],['/admin/preview/payments','WORKSPACE PREVIEW'],['/admin/preview/settings','WORKSPACE PREVIEW']];
  const pageResults=await Promise.all(pages.map(async([route,content])=>{const r=await fetch(base+route),html=await r.text();assert.equal(r.status,200,route);assert.ok(html.toLowerCase().includes(content.toLowerCase()),route+' missing content');return html}));
  for(const route of ['/work/missing','/journal/missing','/admin/missing','/admin/preview/missing'])assert.equal((await fetch(base+route)).status,404,route);
  // All internal page destinations exposed by the public navigation must resolve.
  const destinations=new Set(pageResults.flatMap(html=>[...html.matchAll(/href="(\/[^"#?]*)/g)].map(m=>m[1])).filter(h=>!h.startsWith('/_')&&!h.startsWith('/api/')&&!h.startsWith('/images/')));
  for(const href of destinations)assert.ok((await fetch(base+href)).status<400,'Broken destination '+href);
- console.log('PASS: 23 content/workspace pages, unknown-route 404s and internal navigation destinations.');
+ console.log('PASS: 25 content/workspace pages, unknown-route 404s and internal navigation destinations.');
 
  assert.equal((await get('dashboard')).status,403);
  assert.equal((await get('dashboard',{}, {'oai-authenticated-user-id':'spoof','oai-authenticated-user-email':'studio@example.test'})).status,403);
@@ -44,6 +44,20 @@ try{
  assert.equal((await get('booking',{token:booking.data.token})).data.booking.name,'Runtime Test');
  assert.equal((await get('gallery',{token:g.token})).data.photos[0].selected,1);
  const image=await fetch(base+'/api/studio?'+new URLSearchParams({action:'photo',token:g.token,id:photo.id}));assert.equal(image.status,200);assert.ok((await image.arrayBuffer()).byteLength>1000);
+ // Website photos upload independently from GitHub, including files over the old cap.
+ async function media(body,query='',raw=false){const r=await fetch(base+'/api/website'+query,{method:'POST',headers:{Origin:base,Cookie:cookie,'Content-Type':raw?'application/octet-stream':'application/json'},body:raw?body:JSON.stringify(body)});const data=await r.json();assert.equal(r.status,200,JSON.stringify(data));return data}
+ const original=new Uint8Array(24*1024*1024+8);original.set([255,216,255,224]);
+ const upload=await media({action:'start',name:'large-original.jpg',mime:'image/jpeg',size:original.length,collection:'weddings'});
+ await media(original.slice(0,upload.chunkSize),`?action=part&id=${upload.id}&part=1`,true);
+ await stop();await start();
+ const status=await (await fetch(base+'/api/website?action=status&id='+upload.id,{headers:{Cookie:cookie}})).json();assert.equal(status.parts.length,1);
+ for(let n=2;n<=Math.ceil(original.length/upload.chunkSize);n++)await media(original.slice((n-1)*upload.chunkSize,n*upload.chunkSize),`?action=part&id=${upload.id}&part=${n}`,true);
+ await media({action:'complete',id:upload.id});
+ assert.equal((await fetch(base+'/api/website?action=image&id='+upload.id)).status,403);
+ await media({action:'save',id:upload.id,caption:'Runtime wedding',collection:'weddings',position:0,published:true,featured:true});
+ const publicPhotos=await (await fetch(base+'/api/website?action=public')).json();assert.equal(publicPhotos.photos[0].id,upload.id);
+ assert.equal((await (await fetch(base+'/api/website?action=image&id='+upload.id)).arrayBuffer()).byteLength,original.length);
+ console.log('PASS: website management routes, authenticated 24 MB+ multipart HTTP upload, resume after production restart, private drafts and published originals.');
  // Railway's HTTPS proxy must preserve the request origin for protected POSTs.
  const proxy=await fetch(base+'/api/studio',{method:'POST',headers:{Origin:base.replace('http:','https:'),'X-Forwarded-Proto':'https',Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({action:'saveSettings',settings:config.settings})});assert.equal(proxy.status,200);
  console.log('PASS: production boot on PORT, homepage/assets, healthcheck, rejection of spoofed platform headers, password login, database migrations, booking, photo upload, selection, persistent restart and HTTPS proxy origins.');
