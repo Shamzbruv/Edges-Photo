@@ -28,7 +28,7 @@ async function GET(req) {
         }
         if (a === 'public') {
             const rows = await db().prepare('SELECT id,name,collection,caption,featured,position FROM website_photos WHERE published=1 ORDER BY position,created_at').all();
-            return json({ photos: rows.results });
+            return json({ photos: rows.results, collections: ['gallery', 'weddings', 'portraits', 'celebrations'] });
         }
         await admin();
         if (a === 'list') {
@@ -130,7 +130,7 @@ async function POST(req) {
         }
         const b = await req.json();
         if (b.action === 'start') {
-            if (typeof b.name !== 'string' || !b.name.trim() || b.name.length > 180 || !['image/jpeg', 'image/png', 'image/webp'].includes(b.mime) || !Number.isSafeInteger(b.size) || b.size <= 0 || !['weddings', 'portraits', 'celebrations'].includes(b.collection))
+            if (typeof b.name !== 'string' || !b.name.trim() || b.name.length > 180 || !['image/jpeg', 'image/png', 'image/webp'].includes(b.mime) || !Number.isSafeInteger(b.size) || b.size <= 0 || !['gallery', 'weddings', 'portraits', 'celebrations'].includes(b.collection))
                 fail('Choose a JPG, PNG or WebP and a collection.');
             const id = crypto.randomUUID(), key = `galleries/${id}/${id}`, m = await bucket().createMultipartUpload(key, { httpMetadata: { contentType: b.mime }, size: b.size });
             try {
@@ -161,7 +161,7 @@ async function POST(req) {
             const p = await find('website_photos', b.id);
             if (!p)
                 fail('Photo not found.', 404);
-            if (typeof b.caption !== 'string' || b.caption.length > 500 || !['weddings', 'portraits', 'celebrations'].includes(b.collection) || !Number.isSafeInteger(b.position))
+            if (typeof b.caption !== 'string' || b.caption.length > 500 || !['gallery', 'weddings', 'portraits', 'celebrations'].includes(b.collection) || !Number.isSafeInteger(b.position))
                 fail('Check the caption, collection and order.');
             await db().batch([...(b.featured ? [db().prepare('UPDATE website_photos SET featured=0')] : []), db().prepare('UPDATE website_photos SET caption=?,collection=?,published=?,featured=?,position=? WHERE id=?').bind(b.caption, b.collection, b.published ? 1 : 0, b.featured ? 1 : 0, b.position, b.id)]);
             return json({ ok: true });
