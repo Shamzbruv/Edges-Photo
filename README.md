@@ -1,5 +1,7 @@
 # Edge Photos — Beyond the frame
 
+Production now uses the dedicated Supabase backend described below. The earlier Railway volume/shared-password instructions describe the retained legacy runtime only.
+
 A cinematic, responsive photography site with a persistent studio workspace, client proofing, bookings and payment adapters. Built with React, Vinext and Lenis, with Railway Node/SQLite/private-volume and Sites D1/R2 runtime targets.
 
 ## Railway deployment
@@ -116,3 +118,20 @@ The service worker does not cache admin pages, API responses or private photos. 
 `pnpm test:notifications` checks subscriptions, auth/origin protection, encrypted request generation, queue retries, expiry handling and read states with no actual device sends. `pnpm test:railway` checks manifest/icon serving, the real authenticated inbox and public push-key persistence, alongside existing workflows.
 
 Backend audit: this repository uses Railway SQLite/private-volume files, with D1/R2 adapters retained for Sites. There is no Supabase client, project URL, auth integration or migration setup in this source.
+
+
+## Supabase production backend and visual website editor
+
+Production uses the dedicated `Edge.photo` Supabase project (`hbnyfyhmextdvcpoibdg`). The public URL and anon key live in `lib/supabase-config.json`; neither is a service secret. The management access token and service-role key must never be committed or placed in browser code. Node routes proxy to the `edge-studio` Edge Function, which owns Supabase-managed service credentials and validates Supabase Auth users before administrative operations. The old SQLite/R2 adapters remain available only for legacy/local checks (`STUDIO_TEST_LOCAL=1`). Production no longer requires a Railway volume.
+
+Public sign-up and anonymous Auth are disabled. In this dedicated project, create each admin in **Authentication → Users → Add user**, set a password of at least 12 characters and confirm the email. Each confirmed, nonanonymous, unbanned account can sign in at `/studio-login`; there is no hardcoded email allowlist or account-count cap. Removed/banned accounts are checked server-side, including ownership checks before queued device alerts are sent. The website has a visible **Admin sign in** link. Browser sessions use HttpOnly, SameSite cookies, with server-side refresh; the old shared studio password does not grant access in Supabase mode.
+
+Data tables live in the private `edge_studio` schema with RLS enabled and no grants to `anon` or `authenticated`. The service-only, invoker-rights RPC executes bound statements from trusted Edge code inside a transaction. Public booking/gallery/photo actions retain their previous validation and access boundaries. The private Storage bucket serves images through the protected/publication-aware API. Resumable uploads use Supabase’s TUS interface and its existing provider/plan limits.
+
+At **Website**, click any text, image, link or container in the live preview. The inspector edits text nodes, photographs/alt text, links, colours, typography, spacing, alignment, corner radius and visibility. Header/footer edits apply across pages; other edits apply to the chosen page. Select the surrounding section to style a container. Mobile/desktop preview, reset-element, private drafts and explicit publication are included. Structural selector paths assume the existing page layout; a later code redesign should review or clear affected overrides. Drafts stay private; revisions prevent one admin from silently overwriting another’s changes. The preview never executes pasted HTML or scripts, and publication refuses unpublished library images.
+
+The booking outbox and VAPID keys are now persistent in Supabase. Edge sends after successful writes, and the `edge_studio_push` database Cron job retries each minute using a private dispatcher secret. Delivery claims have a two-minute lease, so concurrent workers cannot claim the same queued delivery. Device opt-in and actual receipt still need verification on the photographer’s device.
+
+Backend source is in `supabase/functions/edge-studio/`. Run `node scripts/prepare-supabase.mjs` after changing a shared route or studio/content schema, then deploy the Edge Function with its own authentication enabled in code (gateway `verify_jwt=false` is intentional because public bookings and private user-validated actions share this endpoint). Database definitions and retry scheduling are in `supabase/schema.sql` and `supabase/notifications-cron.sql`. These are source snapshots; apply future additive changes carefully to preserve existing records. Test the schema RPC, access rules and storage before switching configuration.
+
+`node tests/content-editor.mjs` verifies draft privacy, optimistic revisions, publication and input validation. Existing integration, notification, media and production runtime tests remain available against isolated local adapters. Live Supabase verification uses temporary users/data that must be removed afterward.

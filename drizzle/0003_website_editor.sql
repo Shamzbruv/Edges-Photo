@@ -1,0 +1,1 @@
+CREATE TABLE website_documents(id TEXT PRIMARY KEY,draft TEXT NOT NULL,published TEXT NOT NULL,revision INTEGER NOT NULL DEFAULT 0);

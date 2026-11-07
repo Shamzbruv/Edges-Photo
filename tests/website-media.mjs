@@ -7,7 +7,7 @@ const dir=await mkdtemp(path.join(os.tmpdir(),'edge-media-'));
 process.env.STUDIO_DATA_DIR=dir;
 const runtime=await import('../server/railway-env.mjs');
 globalThis.__mediaEnv=runtime.env;globalThis.__mediaUser=null;process.env.STUDIO_ADMIN_EMAIL='owner@example.test';
-let code=ts.transpileModule(await readFile('app/api/website/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText.replace(/import\s*\{\s*env\s*\}\s*from\s*['"]cloudflare:workers['"];?/, 'const env=globalThis.__mediaEnv;').replace(/import\s*\{\s*getChatGPTUser\s*\}\s*from\s*['"][^'"]+['"];?/, 'const getChatGPTUser=async()=>globalThis.__mediaUser;');
+let code=ts.transpileModule(await readFile('app/api/website/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText.replace(/import[^;]*supabase-proxy['"];?/, 'const supabaseEnabled=false; const proxySupabase=()=>{};').replace(/import\s*\{\s*env\s*\}\s*from\s*['"]cloudflare:workers['"];?/, 'const env=globalThis.__mediaEnv;').replace(/import\s*\{\s*getChatGPTUser\s*\}\s*from\s*['"][^'"]+['"];?/, 'const getChatGPTUser=async()=>globalThis.__mediaUser;');
 const route=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 const owner={email:'owner@example.test'};
 async function post(body,user=owner,query='',raw=false,origin='https://studio.test'){globalThis.__mediaUser=user;const r=await route.POST(new Request('https://studio.test/api/website'+query,{method:'POST',headers:{Origin:origin,'Content-Type':raw?'application/octet-stream':'application/json'},body:raw?body:JSON.stringify(body)}));return {status:r.status,data:await r.json()}}

@@ -8,7 +8,7 @@ import path from 'node:path';
 const dataDir=mkdtempSync(path.join(tmpdir(),'edge-railway-test-'));
 const probe=createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));
 const base='http://127.0.0.1:'+port;let child,logs='';
-const env={...process.env,PORT:String(port),STUDIO_DATA_DIR:dataDir,RAILWAY_VOLUME_MOUNT_PATH:dataDir,RAILWAY_ENVIRONMENT_ID:'isolated-test',STUDIO_ADMIN_EMAIL:'studio@example.test',STUDIO_ADMIN_PASSWORD:'Runtime-test-password-2026-only',NODE_ENV:'production'};
+const env={...process.env,PORT:String(port),STUDIO_DATA_DIR:dataDir,RAILWAY_VOLUME_MOUNT_PATH:dataDir,RAILWAY_ENVIRONMENT_ID:'isolated-test',STUDIO_ADMIN_EMAIL:'studio@example.test',STUDIO_ADMIN_PASSWORD:'Runtime-test-password-2026-only',NODE_ENV:'production',STUDIO_TEST_LOCAL:'1'};
 async function start(){child=spawn(process.execPath,['server/start-railway.mjs'],{env,stdio:['ignore','pipe','pipe']});child.stdout.on('data',d=>{logs+=d});child.stderr.on('data',d=>{logs+=d});const deadline=Date.now()+20000;while(Date.now()<deadline){if(child.exitCode!==null)throw new Error('Production server exited: '+logs);try{if((await fetch(base+'/api/health')).ok)return}catch{}await new Promise(r=>setTimeout(r,100))}throw new Error('Server did not become healthy: '+logs)}
 async function stop(){if(!child||child.exitCode!==null)return;const exit=new Promise(r=>child.once('exit',r));child.kill('SIGTERM');await exit}
 let cookie='';

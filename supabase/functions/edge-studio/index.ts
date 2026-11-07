@@ -1,0 +1,14 @@
+import {DB,BUCKET,verifiedUser} from './runtime.ts';
+import {pushKeys,dispatch} from './push.ts';
+import {createHandlers as studio} from './studio-handler.ts';
+import {createHandlers as website} from './website-handler.ts';
+import {createHandlers as notifications} from './notifications-handler.ts';
+import {createHandlers as content} from './content-handler.ts';
+const origin='https://edges-photo-production.up.railway.app';
+Deno.serve(async(req:Request)=>{try{const u=new URL(req.url),kind=u.searchParams.get('kind')||'';
+if(kind==='health'){await DB.prepare('SELECT 1 AS ok').first();return Response.json({status:'ok',backend:'supabase'})}
+if(kind==='dispatch'){const row=await DB.prepare('SELECT value FROM settings WHERE id=?').bind('dispatcher').first();if(!row||req.headers.get('x-studio-dispatch')!==JSON.parse(row.value).secret)return Response.json({error:'Unauthorized'},{status:401});await dispatch();return Response.json({ok:true})}
+if(req.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'authorization,apikey,content-type,x-studio-origin','Access-Control-Allow-Methods':'GET,POST,OPTIONS'}});
+const factories:Record<string,any>={studio,website,notifications,content};if(!factories[kind])return Response.json({error:'Unknown studio endpoint'},{status:404});const user=await verifiedUser(req),keys=await pushKeys();const env={DB,BUCKET,STUDIO_ADMIN_EMAIL:user?.email||'',STUDIO_RUNTIME:'railway',STUDIO_BACKEND:'supabase',STUDIO_STORAGE_READY:true,STUDIO_UPLOAD_CHUNK_SIZE:6*1024*1024,STUDIO_PUSH_PUBLIC_KEY:keys.publicKey,PAYPAL_CLIENT_ID:Deno.env.get('PAYPAL_CLIENT_ID'),PAYPAL_CLIENT_SECRET:Deno.env.get('PAYPAL_CLIENT_SECRET'),PAYPAL_MODE:Deno.env.get('PAYPAL_MODE'),WIPAY_ACCOUNT_NUMBER:Deno.env.get('WIPAY_ACCOUNT_NUMBER'),WIPAY_API_KEY:Deno.env.get('WIPAY_API_KEY'),WIPAY_MODE:Deno.env.get('WIPAY_MODE')};
+const headers=new Headers(req.headers),forwarded=req.headers.get('x-studio-origin')||req.headers.get('origin');if(req.method!=='GET'&&forwarded!==origin)return Response.json({error:'Invalid request origin'},{status:403});headers.set('origin',origin);u.searchParams.delete('kind');const request=new Request(origin+'/api/'+kind+u.search,{method:req.method,headers,...(req.method==='GET'?{}:{body:await req.arrayBuffer()})});const handler=factories[kind]({env,user})[req.method];if(!handler)return Response.json({error:'Method not allowed'},{status:405});const result=await handler(request);if(req.method==='POST'&&result.ok)EdgeRuntime.waitUntil(dispatch().catch(e=>console.error('Notification delivery will retry:',e.message)));return result
+}catch(e:any){console.error('Studio backend:',e.message);return Response.json({error:'The studio could not complete this request. Please try again.'},{status:500,headers:{'Cache-Control':'no-store'}})}});

@@ -1,10 +1,11 @@
+import {supabaseEnabled,supabaseAuth} from '../../../lib/supabase-proxy';
 import {env} from 'cloudflare:workers';
 import {authConfigured,createSession,SESSION_COOKIE,secureEqual} from '../../../lib/admin-session';
 export const dynamic='force-dynamic';
 const attempts=new Map<string,{count:number,reset:number}>();
 const e=()=>env as unknown as Record<string,any>;
-export async function GET(){return Response.json({runtime:e().STUDIO_RUNTIME==='railway'?'railway':'sites',configured:authConfigured(e())},{headers:{'Cache-Control':'no-store'}})}
-export async function POST(req:Request){const settings=e();if(settings.STUDIO_RUNTIME!=='railway')return Response.json({error:'Use ChatGPT sign-in on this deployment.'},{status:400});if(req.headers.get('origin')!==new URL(req.url).origin)return Response.json({error:'Invalid request origin.'},{status:403});let b:any;try{b=await req.json()}catch{return Response.json({error:'Invalid request.'},{status:400})}
+export async function GET(req:Request){if(supabaseEnabled)return supabaseAuth(req);return Response.json({runtime:e().STUDIO_RUNTIME==='railway'?'railway':'sites',configured:authConfigured(e())},{headers:{'Cache-Control':'no-store'}})}
+export async function POST(req:Request){if(supabaseEnabled)return supabaseAuth(req);const settings=e();if(settings.STUDIO_RUNTIME!=='railway')return Response.json({error:'Use ChatGPT sign-in on this deployment.'},{status:400});if(req.headers.get('origin')!==new URL(req.url).origin)return Response.json({error:'Invalid request origin.'},{status:403});let b:any;try{b=await req.json()}catch{return Response.json({error:'Invalid request.'},{status:400})}
 const secure=new URL(req.url).protocol==='https:'?'; Secure':'';
 if(b.action==='logout')return Response.json({ok:true},{headers:{'Set-Cookie':SESSION_COOKIE+'=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'+secure,'Cache-Control':'no-store'}});
 if(!authConfigured(settings))return Response.json({error:'Studio login needs setup. Set STUDIO_ADMIN_EMAIL and a STUDIO_ADMIN_PASSWORD of at least 16 characters in Railway variables, then redeploy.'},{status:503});

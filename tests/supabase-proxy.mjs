@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import ts from 'typescript';
+let source=ts.transpileModule(readFileSync('lib/supabase-proxy.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replace(/import config from [^;]+;/,"const config={enabled:true,url:'https://supabase.test',anonKey:'public-anon'};");
+const proxy=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const original=globalThis.fetch;let refreshed=false,token='';globalThis.fetch=async(url,options)=>{if(String(url).includes('grant_type=refresh_token')){refreshed=true;return Response.json({access_token:'fresh-access',refresh_token:'fresh-refresh',expires_in:3600})}token=options.headers.Authorization;return Response.json({ok:true},{headers:{'Set-Cookie':'__cf_bm=upstream; Domain=supabase.test; Secure'}})};
+try{let r=await proxy.proxySupabase('studio',new Request('https://studio.test/api/studio?action=dashboard',{headers:{cookie:'edge_sb_access=invalid; edge_sb_refresh=valid-refresh'}}));assert.ok(refreshed);assert.equal(token,'Bearer fresh-access');assert.equal(r.headers.getSetCookie().length,2);assert.ok(!r.headers.get('set-cookie').includes('__cf_bm'));assert.ok(r.headers.getSetCookie().every(c=>c.includes('HttpOnly')&&c.includes('Secure')));
+let calls=0;globalThis.fetch=async(url,options)=>{calls++;if(String(url).includes('grant_type=refresh_token'))return Response.json({error:'expired'},{status:400});assert.equal(options.headers.Authorization,'Bearer public-anon');return Response.json({error:'Sign in'},{status:403})};r=await proxy.proxySupabase('studio',new Request('https://studio.test/api/studio?action=dashboard',{headers:{cookie:'edge_sb_access=invalid; edge_sb_refresh=expired'}}));assert.equal(r.status,403);assert.ok(r.headers.getSetCookie().every(c=>c.includes('Max-Age=0')));
+calls=0;r=await proxy.proxySupabase('content',new Request('https://studio.test/api/content',{method:'POST',headers:{Origin:'https://evil.test'},body:'{}'}));assert.equal(r.status,403);assert.equal(calls,0);
+r=await proxy.proxySupabase('studio',new Request('https://studio.test/api/studio',{headers:{cookie:'edge_sb_access=%broken'}}));assert.equal(r.status,403);
+console.log('PASS: Supabase proxy refresh, secure app cookies, upstream cookie stripping, expired-session clearing, malformed cookie handling and origin validation.');
+}finally{globalThis.fetch=original}
