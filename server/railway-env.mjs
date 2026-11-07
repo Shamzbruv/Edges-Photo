@@ -22,7 +22,7 @@ export function database(){
 }
 function objectPath(key){if(typeof key!=='string'||!/^galleries\/[a-f0-9-]+\/[a-f0-9-]+$/.test(key))throw new Error('Invalid object key');return path.join(root(),'photos',key)}
 export const bucket={async put(key,bytes,options={}){const file=objectPath(key);mkdirSync(path.dirname(file),{recursive:true,mode:0o700});const temp=file+'.tmp';writeFileSync(temp,new Uint8Array(bytes),{mode:0o600});writeFileSync(file+'.json',JSON.stringify(options.httpMetadata||{}),{mode:0o600});renameSync(temp,file)},async get(key){const file=objectPath(key);if(!existsSync(file))return null;return {body:readFileSync(file),httpMetadata:JSON.parse(readFileSync(file+'.json','utf8'))}},async delete(key){const file=objectPath(key);for(const p of [file,file+'.json'])if(existsSync(p))unlinkSync(p)}};
-export const env=new Proxy({}, {get(_target,key){if(key==='DB')return database();if(key==='BUCKET')return bucket;if(key==='STUDIO_RUNTIME')return 'railway';if(key==='STUDIO_STORAGE_READY')return !process.env.RAILWAY_ENVIRONMENT_ID||!!process.env.RAILWAY_VOLUME_MOUNT_PATH&&root()===path.resolve(process.env.RAILWAY_VOLUME_MOUNT_PATH);return process.env[key]}});
+export const env=new Proxy({}, {get(_target,key){if(key==='STUDIO_PUSH_PUBLIC_KEY')return process.env.STUDIO_PUSH_PUBLIC_KEY||null;if(key==='DB')return database();if(key==='BUCKET')return bucket;if(key==='STUDIO_RUNTIME')return 'railway';if(key==='STUDIO_STORAGE_READY')return !process.env.RAILWAY_ENVIRONMENT_ID||!!process.env.RAILWAY_VOLUME_MOUNT_PATH&&root()===path.resolve(process.env.RAILWAY_VOLUME_MOUNT_PATH);return process.env[key]}});
 
 // Multipart uploads keep request memory bounded and survive process restarts.
 const {createReadStream,createWriteStream}=await import('node:fs');

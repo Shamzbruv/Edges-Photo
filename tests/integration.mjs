@@ -25,7 +25,10 @@ const d=new Date(Date.now()+12*86400000);while(d.getUTCDay()===0)d.setUTCDate(d.
 const details={name:'Test Client',email:'client@example.test',phone:'876-555-0100',service:'portrait',date,time:'09:00',location:'Test studio',notes:'QA only',method:'cash',consent:true};
 const first=await call('book',details);assert.equal(first.status,200);const bt=first.data.token;assert.equal(bt.length,64);
 const b=(await get('booking',{token:bt})).data.booking;
+assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM notifications').get().n,1);
+assert.equal(sqlite.prepare('SELECT id FROM notifications').get().id,'booking-'+b.id);
 assert.equal((await call('book',{...details,name:'Double booking'})).status,409);
+assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM notifications').get().n,1);
 // A full-day session must roll back if even one block is occupied.
 assert.equal((await call('book',{...details,service:'wedding'})).status,409);
 assert.equal((await get('availability',{date,service:'portrait'})).data.slots.find(s=>s.time==='11:00').available,true);

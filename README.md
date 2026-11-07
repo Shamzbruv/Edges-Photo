@@ -101,3 +101,18 @@ Open `/admin/website` after studio sign-in. Upload your own JPG/PNG/WebP photogr
 There is no application photo-count quota or 20 MB whole-file cap for this new section. Originals upload in 8 MiB retryable multipart chunks; reselect the same unchanged files and collection in the same browser to resume. Each request is bounded, and originals stream from disk. Browser-generated JPEG previews (1920px, up to 2 MiB) serve the website while originals remain intact. A preview generation failure is reported and does not lose the original. This uploader supports browser-displayable JPG/PNG/WebP, not RAW files. Private client galleries retain their existing rules.
 
 Physical storage and provider multipart limits still apply (currently 10,000 parts per file, about 78 GiB with 8 MiB chunks). This is not infinite storage. Railway requires the existing persistent volume and studio login configuration; no infrastructure is provisioned by a source push. Incomplete multipart sessions remain available for resume; completed Railway chunk files are removed after their database record commits. Never remove active upload directories when cleaning up abandoned sessions.
+
+
+## Studio web app and booking notifications
+
+The authenticated studio has `/admin/notifications`, a bell with an unread count, read/unread inbox management, and a 15-second foreground refresh. A successful booking and its notification commit atomically. Existing pending booking requests are backfilled into the inbox once, without sending old push alerts.
+
+Open Notifications, choose **Install studio app**, then **Enable booking alerts** on each device. The browser must grant notification permission; on iPhone/iPad the Home Screen app must be installed and opened first. **Send test alert** queues a real push for the current device. No permission is requested automatically. Permission, installation and actual receipt must be checked on the photographer’s device. Signing out unsubscribes the current device.
+
+Railway starts a durable delivery worker every five seconds. VAPID keys are generated once and kept privately on the existing persistent volume (`push-vapid.json`, mode 0600); only the public key is exposed to authorized browsers. No manual push secrets are needed for this runtime. Delivery records survive restarts, retry transient errors up to eight attempts with exponential backoff, and remove expired subscriptions on 404/410. Device banners contain a generic message; client details remain behind sign-in. Delivery depends on browser/OS support, permission, connectivity and the hosting service being running. The Sites target retains the in-app inbox but has no push dispatcher until an equivalent sender/public key is provisioned.
+
+The service worker does not cache admin pages, API responses or private photos. Offline navigation shows only a generic reconnect screen. The app manifest includes standalone display, PNG icons derived from the existing favicon, and booking/notification shortcuts.
+
+`pnpm test:notifications` checks subscriptions, auth/origin protection, encrypted request generation, queue retries, expiry handling and read states with no actual device sends. `pnpm test:railway` checks manifest/icon serving, the real authenticated inbox and public push-key persistence, alongside existing workflows.
+
+Backend audit: this repository uses Railway SQLite/private-volume files, with D1/R2 adapters retained for Sites. There is no Supabase client, project URL, auth integration or migration setup in this source.
