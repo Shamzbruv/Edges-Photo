@@ -155,3 +155,7 @@ The signature logo was recreated from the supplied D&T reference, with handwritt
 ## Replacing a website photograph
 
 Admin → Website now opens with Upload photos and Photo library & uploads shortcuts. Click a photograph in the visual preview, then Upload / change photo in the inspector to choose a replacement from your device. The existing resumable uploader saves it to Supabase as a private draft and assigns it to the selected frame; the inspector shows upload progress and a thumbnail. Make photo public explicitly, then Publish website to publish the page edit. Existing uploaded photos are available in the live-synchronised picker, and advanced URL entry is collapsed by default. Upload cancellation and failures return control to the inspector. Website publication blocks references to known private draft photos. No photographs were uploaded during implementation.
+
+## Visual colour controls
+
+Text colour and Background colour in the visual editor use a colour wheel with brightness, opacity and preset swatches. Click Choose colour to open it; no RGB typing is required. Existing saved RGB/RGBA/hex values load without changing the website until the admin chooses a new value. No background colour restores transparency. Wheel dragging updates the preview; arrow keys adjust hue/saturation and labelled sliders adjust brightness/opacity. The existing Save draft / Publish website workflow is unchanged.
