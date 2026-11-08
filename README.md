@@ -151,3 +151,7 @@ Wedding enquiries default to `/book?session=wedding`. When package rates have no
 ## D&T Edge Photos brand assets
 
 The signature logo was recreated from the supplied D&T reference, with handwritten lettering and its flourishes preserved. Native SVG assets under `public/brand/` provide ink, ivory and muted-gold signature logos, derived D&T compact marks and a square app icon. A shared `BrandLogo` component is used in public navigation/footer, studio login/sidebar, booking and private client pages. Photo placeholders and the viewer use the signature logo; the About page uses the clean transparent master. Favicon, installable app icons, studio avatar, notifications and offline screen share the same identity. Gallery and client photo files were not uploaded or modified.
+
+## Replacing a website photograph
+
+Admin → Website now opens with Upload photos and Photo library & uploads shortcuts. Click a photograph in the visual preview, then Upload / change photo in the inspector to choose a replacement from your device. The existing resumable uploader saves it to Supabase as a private draft and assigns it to the selected frame; the inspector shows upload progress and a thumbnail. Make photo public explicitly, then Publish website to publish the page edit. Existing uploaded photos are available in the live-synchronised picker, and advanced URL entry is collapsed by default. Upload cancellation and failures return control to the inspector. Website publication blocks references to known private draft photos. No photographs were uploaded during implementation.
